@@ -1,13 +1,51 @@
-// app/page.tsx
 "use client";
 
 import { useState } from "react";
+import type { ReviewResponse } from "@/lib/reviewTypes";
 
 const LANGUAGES = ["C++", "Java", "Python", "JavaScript", "TypeScript", "Go"];
 
 export default function Home() {
   const [language, setLanguage] = useState("C++");
   const [code, setCode] = useState("");
+  const [review, setReview] = useState<ReviewResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleReview = async () => {
+    const trimmed = code.trim();
+    if (!trimmed) {
+      setError("Please paste some code before requesting a review.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/review", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ language, code: trimmed }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        const msg = data?.error || "Failed to generate review.";
+        throw new Error(msg);
+      }
+
+      const data = (await res.json()) as ReviewResponse;
+      setReview(data);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong while reviewing your code.");
+      setReview(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-screen flex flex-col">
@@ -53,9 +91,15 @@ export default function Home() {
             clean reviews.
           </p>
           <p className="text-xs text-slate-500">
-            AI-powered · Code quality · Complexity insights
+            AI-powered (mock for now) · Code quality · Complexity insights
           </p>
         </div>
+
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            {error}
+          </div>
+        )}
 
         {/* Two-panel workspace */}
         <div className="grid gap-4 md:grid-cols-2">
@@ -113,13 +157,11 @@ export default function Home() {
             <div className="flex justify-end">
               <button
                 type="button"
-                className="rounded-full bg-orange-500 px-4 py-1.5 text-xs font-medium text-white shadow-md hover:bg-orange-600 active:scale-[0.98] transition"
-                onClick={() => {
-                  // For now just a placeholder
-                  alert("Review logic will be added later. UI is ready ✅");
-                }}
+                className="rounded-full bg-orange-500 px-4 py-1.5 text-xs font-medium text-white shadow-md hover:bg-orange-600 active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={handleReview}
+                disabled={isLoading || !code.trim()}
               >
-                Review Code
+                {isLoading ? "Reviewing..." : "Review Code"}
               </button>
             </div>
           </div>
@@ -130,43 +172,78 @@ export default function Home() {
               <div>
                 <h3 className="text-sm font-semibold">Review Summary</h3>
                 <p className="text-xs text-slate-500">
-                  Run a review to see feedback tailored to your code.
+                  {review
+                    ? "Here is the latest analysis for your snippet."
+                    : "Run a review to see feedback tailored to your code."}
                 </p>
               </div>
               <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                No review yet
+                {review ? "Review ready" : "No review yet"}
               </span>
             </div>
 
             <div className="flex flex-col gap-3 text-xs">
+              {/* Potential Issues */}
               <div className="rounded-xl border border-orange-100 bg-orange-50/70 p-3">
                 <h4 className="mb-1 text-[11px] font-semibold text-orange-700">
                   🪲 Potential Issues
                 </h4>
-                <p className="text-[11px] text-orange-900/90">
-                  Once you run a review, this section will highlight possible
-                  bugs, edge cases, and risky patterns in your code.
-                </p>
+                {review ? (
+                  <ul className="list-disc pl-4 space-y-1 text-orange-900/90">
+                    {review.potentialIssues.items.map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[11px] text-orange-900/90">
+                    Once you run a review, this section will highlight possible
+                    bugs, edge cases, and risky patterns in your code.
+                  </p>
+                )}
               </div>
 
+              {/* Improvements */}
               <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-3">
                 <h4 className="mb-1 text-[11px] font-semibold text-emerald-700">
                   ✨ Improvements
                 </h4>
-                <p className="text-[11px] text-emerald-900/90">
-                  You&apos;ll see suggestions on readability, structure,
-                  naming, and best practices here.
-                </p>
+                {review ? (
+                  <ul className="list-disc pl-4 space-y-1 text-emerald-900/90">
+                    {review.improvements.items.map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[11px] text-emerald-900/90">
+                    You&apos;ll see suggestions on readability, structure,
+                    naming, and best practices here.
+                  </p>
+                )}
               </div>
 
+              {/* Complexity */}
               <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-3">
                 <h4 className="mb-1 text-[11px] font-semibold text-sky-700">
                   📈 Complexity (estimated)
                 </h4>
-                <p className="text-[11px] text-sky-900/90">
-                  The reviewer will estimate time and space complexity for the
-                  main function or algorithm you&apos;ve provided.
-                </p>
+                {review ? (
+                  <div className="space-y-1 text-sky-900/90">
+                    <p>
+                      <span className="font-semibold">Time:</span>{" "}
+                      {review.complexity.time}
+                    </p>
+                    <p>
+                      <span className="font-semibold">Space:</span>{" "}
+                      {review.complexity.space}
+                    </p>
+                    <p className="text-[11px]">{review.complexity.notes}</p>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-sky-900/90">
+                    The reviewer will estimate time and space complexity for the
+                    main function or algorithm you&apos;ve provided.
+                  </p>
+                )}
               </div>
             </div>
           </div>
