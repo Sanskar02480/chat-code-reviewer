@@ -12,6 +12,7 @@ export type ComplexityInfo = {
 export type ReviewResponse = {
   language: string;
   summary: string;
+  suggestedFix: string;   // ✅ ADD THIS
   potentialIssues: ReviewSection;
   improvements: ReviewSection;
   complexity: ComplexityInfo;
