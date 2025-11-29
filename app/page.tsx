@@ -90,9 +90,10 @@ export default function Home() {
             bugs, code quality, and complexity. Designed for fast iterations and
             clean reviews.
           </p>
-          <p className="text-xs text-slate-500">
-            AI-powered (mock for now) · Code quality · Complexity insights
-          </p>
+         <p className="text-xs text-slate-500">
+  Rule-based analysis · Code quality · Complexity insights
+</p>
+
         </div>
 
         {error && (
