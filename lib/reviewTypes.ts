@@ -10,10 +10,18 @@ export type ComplexityInfo = {
 };
 
 export type ReviewResponse = {
-  language: string;
-  summary: string;
-  suggestedFix: string;   // ✅ ADD THIS
-  potentialIssues: ReviewSection;
-  improvements: ReviewSection;
-  complexity: ComplexityInfo;
+  quality: {
+    score: number;
+    grade: string;
+    label: string;
+  };
+  potentialIssues: { items: string[] };
+  improvements: { items: string[] };
+  complexity: {
+    time: string;
+    space: string;
+    notes: string;
+  };
+  suggestedFix: string;
 };
+
